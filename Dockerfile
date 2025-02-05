@@ -1,9 +1,9 @@
 FROM ubuntu:24.04
 
-RUN apt-get update && apt-get install -y nodejs wget
+RUN apt-get update && apt-get install -y nodejs wget && rm -rf /var/lib/apt/lists/*
 RUN wget -qO- https://get.pnpm.io/install.sh | ENV="$HOME/.bashrc" SHELL="$(which bash)" bash -
-COPY 2048-mern/server /home/ubuntu/2048-mern/server
-COPY 2048-mern/client /home/ubuntu/2048-mern/client
+COPY server /home/ubuntu/2048-mern/server
+COPY client /home/ubuntu/2048-mern/client
 
 WORKDIR /home/ubuntu/2048-mern/client
 RUN /root/.local/share/pnpm/pnpm install
