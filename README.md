@@ -31,4 +31,10 @@ npm run start
 ```
 
 L'application se lance sur le (port 5000)[](localhost:5000/index.html)
-L'api est disponible sur (/api/scores)[localhost:5000/api/scores]
+L'api est disponible sur (/api/scores)[](localhost:5000/api/scores)
+
+L'application utilise la variable d'environnement MONGO_URI pour se connecter à une base de donnée MongoDB.
+Ex : 
+```bash
+MONGO_URI=mongodb://login:password@mongohostname:27017/databasename
+```
