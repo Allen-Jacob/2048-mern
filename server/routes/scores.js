@@ -25,7 +25,16 @@ router.get('/', async (req, res) => {
     const { game } = req.query;
 
     try {
-        const filter = game ? { game } : {};
+        let filter = {};
+        if (game) {
+            // Pour 2048, inclure aussi les scores sans champ 'game' (anciens scores)
+            if (game === '2048') {
+                filter = { $or: [{ game: '2048' }, { game: { $exists: false } }] };
+            } else {
+                filter = { game };
+            }
+        }
+
         const topScores = await Score.find(filter).sort({ score: -1 }).limit(10);
         res.json(topScores);
     } catch (err) {
