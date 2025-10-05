@@ -39,18 +39,35 @@ connectDB();
 const scoresRouter = require('./routes/scores');
 app.use('/api/scores', scoresRouter);
 
-// Serve static files from the React app
-app.use(express.static(path.join(__dirname, '..', 'client', 'build')));
+// Serve static files from the public folder
+app.use(express.static(path.join(__dirname, '..', 'client', 'public')));
 
-// Serve high scores page
-app.get('/scores', (req, res) => {
-    res.sendFile(path.join(__dirname, '..', 'client', 'build', 'scores.html'));
+// Serve home page as the default route
+app.get('/', (req, res) => {
+    res.sendFile(path.join(__dirname, '..', 'client', 'public', 'home.html'));
 });
 
-// The "catchall" handler: for any request that doesn't match above, send React's index.html
-// app.get('*', (req, res) => {
-//    res.sendFile(path.join(__dirname, '..', 'client', 'build', 'index.html'));
-// });
+// Serve 2048 game
+app.get('/2048', (req, res) => {
+    res.sendFile(path.join(__dirname, '..', 'client', 'public', '2048.html'));
+});
+
+// Serve other games
+app.get('/snake', (req, res) => {
+    res.sendFile(path.join(__dirname, '..', 'client', 'public', 'snake.html'));
+});
+
+app.get('/pong', (req, res) => {
+    res.sendFile(path.join(__dirname, '..', 'client', 'public', 'pong.html'));
+});
+
+app.get('/flappybird', (req, res) => {
+    res.sendFile(path.join(__dirname, '..', 'client', 'public', 'flappybird.html'));
+});
+
+app.get('/leaderboard', (req, res) => {
+    res.sendFile(path.join(__dirname, '..', 'client', 'public', 'leaderboard.html'));
+});
 
 // Start the server
 const PORT = process.env.PORT || 5000;
