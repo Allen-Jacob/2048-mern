@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pong Game</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: Arial, sans-serif;
+            background: linear-gradient(135deg, #232526 0%, #414345 100%);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            text-align: center;
+            background: white;
+            padding: 30px;
+            border-radius: 20px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+        }
+
+        h1 {
+            color: #232526;
+            margin-bottom: 20px;
+        }
+
+        #gameCanvas {
+            border: 3px solid #232526;
+            border-radius: 10px;
+            background: #000;
+            display: block;
+            margin: 20px auto;
+        }
+
+        .score-display {
+            font-size: 1.5em;
+            color: #232526;
+            margin: 10px 0;
+        }
+
+        .controls {
+            margin: 20px 0;
+        }
+
+        .btn {
+            padding: 12px 30px;
+            margin: 5px;
+            border-radius: 25px;
+            border: none;
+            font-weight: bold;
+            font-size: 1em;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .btn-primary {
+            background: #232526;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #414345;
+            transform: scale(1.05);
+        }
+
+        .btn-secondary {
+            background: #f093fb;
+            color: white;
+        }
+
+        .btn-secondary:hover {
+            background: #d87ae8;
+            transform: scale(1.05);
+        }
+
+        #usernameModal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            z-index: 1000;
+        }
+
+        .modal-content {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: white;
+            padding: 40px;
+            border-radius: 15px;
+            text-align: center;
+            box-shadow: 0 10px 50px rgba(0, 0, 0, 0.5);
+        }
+
+        .modal-content h2 {
+            margin-bottom: 20px;
+            color: #232526;
+        }
+
+        .modal-content input {
+            padding: 12px;
+            width: 250px;
+            font-size: 1em;
+            border: 2px solid #232526;
+            border-radius: 10px;
+            margin-bottom: 20px;
+        }
+
+        .game-over-message {
+            color: #d32f2f;
+            font-size: 1.2em;
+            margin: 10px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🏓 Pong Game 🏓</h1>
+
+        <div class="score-display">
+            Score: <span id="score">0</span>
+        </div>
+
+        <canvas id="gameCanvas" width="600" height="400"></canvas>
+
+        <div id="gameOverMessage" class="game-over-message" style="display: none;">
+            Game Over! Score final: <span id="finalScore"></span>
+        </div>
+
+        <div class="controls">
+            <button id="startBtn" class="btn btn-primary">Nouvelle Partie</button>
+            <a href="home.html" class="btn btn-secondary">Retour à l'accueil</a>
+            <a href="leaderboard.html?game=pong" class="btn btn-secondary">Classement</a>
+        </div>
+
+        <p style="margin-top: 20px; color: #666;">Utilisez les flèches HAUT/BAS pour déplacer la raquette</p>
+    </div>
+
+    <div id="usernameModal">
+        <div class="modal-content">
+            <h2>Entrez votre nom</h2>
+            <input type="text" id="usernameInput" placeholder="Votre nom" maxlength="20">
+            <br>
+            <button id="submitUsername" class="btn btn-primary">Commencer</button>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const scoreDisplay = document.getElementById('score');
+        const startBtn = document.getElementById('startBtn');
+        const usernameModal = document.getElementById('usernameModal');
+        const usernameInput = document.getElementById('usernameInput');
+        const submitUsername = document.getElementById('submitUsername');
+        const gameOverMessage = document.getElementById('gameOverMessage');
+        const finalScoreDisplay = document.getElementById('finalScore');
+
+        let gameRunning = false;
+        let username = '';
+        let score = 0;
+
+        // Paddle du joueur
+        const paddleWidth = 10;
+        const paddleHeight = 80;
+        let playerY = canvas.height / 2 - paddleHeight / 2;
+        const playerX = 10;
+
+        // Paddle de l'ordinateur
+        let computerY = canvas.height / 2 - paddleHeight / 2;
+        const computerX = canvas.width - paddleWidth - 10;
+
+        // Balle
+        let ballX = canvas.width / 2;
+        let ballY = canvas.height / 2;
+        const ballRadius = 8;
+        let ballSpeedX = 5;
+        let ballSpeedY = 3;
+
+        // Contrôles
+        let upPressed = false;
+        let downPressed = false;
+
+        startBtn.addEventListener('click', () => {
+            usernameModal.style.display = 'block';
+            usernameInput.focus();
+        });
+
+        submitUsername.addEventListener('click', startGame);
+        usernameInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') startGame();
+        });
+
+        function startGame() {
+            username = usernameInput.value.trim();
+            if (!username) {
+                alert('Veuillez entrer un nom');
+                return;
+            }
+
+            usernameModal.style.display = 'none';
+            gameOverMessage.style.display = 'none';
+
+            score = 0;
+            scoreDisplay.textContent = score;
+            ballX = canvas.width / 2;
+            ballY = canvas.height / 2;
+            ballSpeedX = 5;
+            ballSpeedY = 3;
+            playerY = canvas.height / 2 - paddleHeight / 2;
+            computerY = canvas.height / 2 - paddleHeight / 2;
+            gameRunning = true;
+
+            gameLoop();
+        }
+
+        function gameLoop() {
+            if (!gameRunning) return;
+
+            update();
+            draw();
+            requestAnimationFrame(gameLoop);
+        }
+
+        function update() {
+            // Déplacer le paddle du joueur
+            if (upPressed && playerY > 0) {
+                playerY -= 6;
+            }
+            if (downPressed && playerY < canvas.height - paddleHeight) {
+                playerY += 6;
+            }
+
+            // IA simple pour l'ordinateur
+            const computerCenter = computerY + paddleHeight / 2;
+            if (computerCenter < ballY - 35) {
+                computerY += 4;
+            } else if (computerCenter > ballY + 35) {
+                computerY -= 4;
+            }
+
+            // Déplacer la balle
+            ballX += ballSpeedX;
+            ballY += ballSpeedY;
+
+            // Rebond haut/bas
+            if (ballY - ballRadius < 0 || ballY + ballRadius > canvas.height) {
+                ballSpeedY = -ballSpeedY;
+            }
+
+            // Collision avec paddle joueur
+            if (ballX - ballRadius < playerX + paddleWidth &&
+                ballY > playerY &&
+                ballY < playerY + paddleHeight) {
+                ballSpeedX = Math.abs(ballSpeedX);
+                ballSpeedX *= 1.05; // Augmenter légèrement la vitesse
+                score += 10;
+                scoreDisplay.textContent = score;
+            }
+
+            // Collision avec paddle ordinateur
+            if (ballX + ballRadius > computerX &&
+                ballY > computerY &&
+                ballY < computerY + paddleHeight) {
+                ballSpeedX = -Math.abs(ballSpeedX);
+            }
+
+            // Balle sort à gauche (défaite)
+            if (ballX - ballRadius < 0) {
+                endGame();
+            }
+
+            // Balle sort à droite (point marqué)
+            if (ballX + ballRadius > canvas.width) {
+                ballX = canvas.width / 2;
+                ballY = canvas.height / 2;
+                ballSpeedX = -5;
+                ballSpeedY = (Math.random() - 0.5) * 6;
+            }
+        }
+
+        function draw() {
+            // Fond noir
+            ctx.fillStyle = '#000';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Ligne centrale
+            ctx.strokeStyle = '#fff';
+            ctx.setLineDash([10, 10]);
+            ctx.beginPath();
+            ctx.moveTo(canvas.width / 2, 0);
+            ctx.lineTo(canvas.width / 2, canvas.height);
+            ctx.stroke();
+            ctx.setLineDash([]);
+
+            // Paddle joueur
+            ctx.fillStyle = '#0f0';
+            ctx.fillRect(playerX, playerY, paddleWidth, paddleHeight);
+
+            // Paddle ordinateur
+            ctx.fillStyle = '#f00';
+            ctx.fillRect(computerX, computerY, paddleWidth, paddleHeight);
+
+            // Balle
+            ctx.fillStyle = '#fff';
+            ctx.beginPath();
+            ctx.arc(ballX, ballY, ballRadius, 0, Math.PI * 2);
+            ctx.fill();
+        }
+
+        async function endGame() {
+            gameRunning = false;
+            finalScoreDisplay.textContent = score;
+            gameOverMessage.style.display = 'block';
+
+            // Envoyer le score à l'API
+            try {
+                await fetch('/api/scores', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name: username, score: score, game: 'pong' })
+                });
+            } catch (error) {
+                console.error('Erreur lors de l\'envoi du score:', error);
+            }
+        }
+
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'ArrowUp') upPressed = true;
+            if (e.key === 'ArrowDown') downPressed = true;
+        });
+
+        document.addEventListener('keyup', (e) => {
+            if (e.key === 'ArrowUp') upPressed = false;
+            if (e.key === 'ArrowDown') downPressed = false;
+        });
+    </script>
+</body>
+</html>

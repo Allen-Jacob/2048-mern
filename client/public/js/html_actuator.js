@@ -130,6 +130,30 @@ HTMLActuator.prototype.message = function (won) {
 
   this.messageContainer.classList.add(type);
   this.messageContainer.getElementsByTagName("p")[0].textContent = message;
+
+  // Envoyer le score à l'API si le jeu est terminé
+  if (!won && this.score > 0) {
+    this.submitScore();
+  }
+};
+
+HTMLActuator.prototype.submitScore = async function () {
+  const username = prompt("Entrez votre nom pour sauvegarder votre score:");
+  if (!username || username.trim() === '') return;
+
+  try {
+    await fetch('/api/scores', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        name: username.trim(),
+        score: this.score,
+        game: '2048'
+      })
+    });
+  } catch (error) {
+    console.error('Erreur lors de l\'envoi du score:', error);
+  }
 };
 
 HTMLActuator.prototype.clearMessage = function () {

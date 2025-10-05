@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Classement</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            padding: 40px;
+            border-radius: 20px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+            max-width: 800px;
+            width: 100%;
+        }
+
+        h1 {
+            color: #667eea;
+            text-align: center;
+            margin-bottom: 30px;
+            font-size: 2.5em;
+        }
+
+        .game-title {
+            text-align: center;
+            color: #764ba2;
+            margin-bottom: 20px;
+            font-size: 1.5em;
+        }
+
+        #loading {
+            text-align: center;
+            color: #667eea;
+            font-size: 1.2em;
+            padding: 20px;
+        }
+
+        #error-message {
+            text-align: center;
+            color: #d32f2f;
+            font-size: 1.1em;
+            padding: 20px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+        }
+
+        thead {
+            background: #667eea;
+            color: white;
+        }
+
+        th, td {
+            padding: 15px;
+            text-align: left;
+        }
+
+        th {
+            font-weight: bold;
+            font-size: 1.1em;
+        }
+
+        tbody tr {
+            border-bottom: 1px solid #e0e0e0;
+            transition: background 0.3s ease;
+        }
+
+        tbody tr:hover {
+            background: #f5f5f5;
+        }
+
+        tbody tr:nth-child(odd) {
+            background: #fafafa;
+        }
+
+        tbody tr:nth-child(odd):hover {
+            background: #f0f0f0;
+        }
+
+        .rank {
+            font-weight: bold;
+            color: #667eea;
+            font-size: 1.2em;
+        }
+
+        .rank-1 { color: #FFD700; }
+        .rank-2 { color: #C0C0C0; }
+        .rank-3 { color: #CD7F32; }
+
+        .score-value {
+            font-weight: bold;
+            color: #764ba2;
+        }
+
+        .controls {
+            text-align: center;
+            margin-top: 30px;
+        }
+
+        .btn {
+            display: inline-block;
+            padding: 12px 30px;
+            margin: 5px;
+            border-radius: 25px;
+            text-decoration: none;
+            font-weight: bold;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            border: none;
+            font-size: 1em;
+        }
+
+        .btn-primary {
+            background: #667eea;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #5568d3;
+            transform: scale(1.05);
+        }
+
+        .btn-secondary {
+            background: #764ba2;
+            color: white;
+        }
+
+        .btn-secondary:hover {
+            background: #5f3a82;
+            transform: scale(1.05);
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 40px;
+            color: #999;
+            font-size: 1.1em;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🏆 Classement 🏆</h1>
+        <div class="game-title" id="gameTitle"></div>
+
+        <div id="loading">Chargement des scores...</div>
+        <div id="error-message"></div>
+
+        <table id="scores-table" style="display: none;">
+            <thead>
+                <tr>
+                    <th>Rang</th>
+                    <th>Nom</th>
+                    <th>Score</th>
+                    <th>Date</th>
+                </tr>
+            </thead>
+            <tbody id="scores-body">
+            </tbody>
+        </table>
+
+        <div class="controls">
+            <a href="home.html" class="btn btn-primary">Retour à l'accueil</a>
+            <a href="#" id="playAgainBtn" class="btn btn-secondary">Jouer</a>
+        </div>
+    </div>
+
+    <script>
+        const API_URL = '/api/scores';
+        const urlParams = new URLSearchParams(window.location.search);
+        const game = urlParams.get('game') || '2048';
+
+        const gameNames = {
+            '2048': '2048',
+            'snake': 'Snake',
+            'pong': 'Pong',
+            'flappybird': 'Flappy Bird'
+        };
+
+        const gameFiles = {
+            '2048': 'index.html',
+            'snake': 'snake.html',
+            'pong': 'pong.html',
+            'flappybird': 'flappybird.html'
+        };
+
+        document.getElementById('gameTitle').textContent = gameNames[game] || game;
+        document.getElementById('playAgainBtn').href = gameFiles[game] || 'home.html';
+
+        async function fetchHighScores() {
+            try {
+                const response = await fetch(`${API_URL}?game=${game}`);
+
+                if (!response.ok) {
+                    throw new Error(`HTTP error! Status: ${response.status}`);
+                }
+
+                const scores = await response.json();
+                displayHighScores(scores);
+            } catch (error) {
+                displayError(`Erreur lors du chargement des scores: ${error.message}`);
+                console.error('Error fetching high scores:', error);
+            } finally {
+                document.getElementById('loading').style.display = 'none';
+            }
+        }
+
+        function displayHighScores(scores) {
+            const table = document.getElementById('scores-table');
+            const tbody = document.getElementById('scores-body');
+
+            tbody.innerHTML = '';
+
+            if (scores.length === 0) {
+                const emptyState = document.createElement('div');
+                emptyState.className = 'empty-state';
+                emptyState.textContent = 'Aucun score enregistré pour ce jeu. Soyez le premier à jouer!';
+                document.querySelector('.container').insertBefore(
+                    emptyState,
+                    document.querySelector('.controls')
+                );
+            } else {
+                scores.forEach((score, index) => {
+                    const row = document.createElement('tr');
+
+                    const rankCell = document.createElement('td');
+                    rankCell.className = `rank rank-${index + 1}`;
+                    rankCell.textContent = index + 1;
+                    row.appendChild(rankCell);
+
+                    const nameCell = document.createElement('td');
+                    nameCell.textContent = score.name;
+                    row.appendChild(nameCell);
+
+                    const scoreCell = document.createElement('td');
+                    scoreCell.className = 'score-value';
+                    scoreCell.textContent = score.score;
+                    row.appendChild(scoreCell);
+
+                    const dateCell = document.createElement('td');
+                    const date = new Date(score.date);
+                    dateCell.textContent = date.toLocaleDateString() + ' ' + date.toLocaleTimeString();
+                    row.appendChild(dateCell);
+
+                    tbody.appendChild(row);
+                });
+
+                table.style.display = 'table';
+            }
+        }
+
+        function displayError(message) {
+            const errorDiv = document.getElementById('error-message');
+            errorDiv.textContent = message;
+        }
+
+        window.addEventListener('DOMContentLoaded', fetchHighScores);
+    </script>
+</body>
+</html>

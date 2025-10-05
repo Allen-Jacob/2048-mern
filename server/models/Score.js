@@ -12,6 +12,12 @@ const ScoreSchema = new mongoose.Schema({
         required: true,
         min: 0,
     },
+    game: {
+        type: String,
+        required: true,
+        enum: ['2048', 'snake', 'pong', 'flappybird'],
+        default: '2048',
+    },
     date: {
         type: Date,
         default: Date.now,
